@@ -9,8 +9,7 @@ L = D - G;
 
 % Protocol A: averaging
 
-
-
+WA = (I + D)^-1 * (I + G);
 
 
 % Protocol B: one step
