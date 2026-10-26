@@ -7,7 +7,7 @@ d = sum(G, 2);
 D = diag(d);
 L = D - G;
 
-% Protocol A: averaging
+% Protocol A: averaginggit
 
 WA = (I + D)^-1 * (I + G);
 
