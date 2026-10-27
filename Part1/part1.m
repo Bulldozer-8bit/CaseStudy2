@@ -65,3 +65,5 @@ disp(G_test);
 stats_test = graph_stats(G_test);
 disp(stats_test);
 disp(stats_test.degree);
+
+save('deployment_parameters.mat', 'P0', 'r_min', 'k');

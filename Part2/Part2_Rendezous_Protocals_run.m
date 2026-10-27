@@ -4,15 +4,14 @@ projectRoot = fileparts(fileparts(mfilename('fullpath'))); % Find the project ro
 addpath(fullfile(projectRoot, 'Part1')); % Add Part1 to MATLAB's search path
 
 n = 100;
-rng(105);
-P0 = [5*rand(50,2); 5*rand(50,2) + [6 0]]; % initial robot position deployment 
-% P0 is 100 by 2
 
-% input required
-% k = ? (nearest neighbor number in make_ring)
-% K = ? (maximum iteration number)
-% rmin = ? (in make_disk)
+% P0's dimension is 100 by 2
 
+load('deployment_parameters.mat', 'P0', 'r_min', 'k');
+disp(r_min);
+disp(k);
+disp(size(P0));
+K = 4500; % could be changed
 x0 = P0(:,1);
 y0 = P0(:,2);
 
@@ -21,11 +20,13 @@ y0 = P0(:,2);
 G1 = make_complete(n);
 G2 = make_star(n);
 G3 = make_ring(n, k);
-G4 = make_disk(P0, rmin);
+G4 = make_disk(P0, r_min);
+
+G4_larger = make_disk(P0, r_min + 0.4);
 
 
 I = eye(n); % 100x100 identity matrix
-% G = G1/G2/G3/G4 
+% G = G1/G2/G3/G4/G4_larger
 d = sum(G, 2);
 D = diag(d);
 L = D - G;
