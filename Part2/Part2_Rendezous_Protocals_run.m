@@ -4,13 +4,17 @@ projectRoot = fileparts(fileparts(mfilename('fullpath'))); % Find the project ro
 addpath(fullfile(projectRoot, 'Part1')); % Add Part1 to MATLAB's search path
 
 n = 100;
+rng(105);
+P0 = [5*rand(50,2); 5*rand(50,2) + [6 0]]; % initial robot position deployment 
+% P0 is 100 by 2
+
 % input required
 % k = ? (nearest neighbor number in make_ring)
 % K = ? (maximum iteration number)
-% P0 = ? (initial value in make_disk)
 % rmin = ? (in make_disk)
-% x0 = ?
-% y0 = ?
+
+x0 = P0(:,1);
+y0 = P0(:,2);
 
 
 % Generate four networks in Part 1
@@ -67,6 +71,22 @@ else
     timeB = idxB - 1;
 end
 
+% Plot δ[k] on a log scale, all on one figure
+
+figure;
+semilogy(0:K, max(deltaA, eps), 'LineWidth', 1.5); %semilogy means log scale
+% eps is the accuracy of matlab, so any value of deltaA below this is inaccurate
+hold on;
+semilogy(0:K, max(deltaB, eps), 'LineWidth', 1.5);
+
+yline(thresholdA, '--', 'A: 1% threshold');
+yline(thresholdB, '--', 'B: 1% threshold');
+xlabel('Iteration k');
+ylabel('Convergence spread \delta[k]');
+title('Rendezvous Convergence');
+legend('Protocol A', 'Protocol B', 'Location', 'best');
+grid on;
+
 % report kε for each.
 
 fprintf('Protocol A rendezvous time: ');
@@ -83,21 +103,7 @@ else
     fprintf('%d steps\n', timeB);
 end
 
-% Plot δ[k] on a log scale, all on one figure
 
-figure;
-semilogy(0:K, max(deltaA, eps), 'LineWidth', 1.5); %semilogy means log scale
-% eps is the accuracy of matlab, so any value of deltaA below this is inaccurate
-hold on;
-semilogy(0:K, max(deltaB, eps), 'LineWidth', 1.5);
-
-yline(thresholdA, '--', 'A: 1% threshold');
-yline(thresholdB, '--', 'B: 1% threshold');
-xlabel('Iteration k');
-ylabel('Convergence spread \delta[k]');
-title('Rendezvous Convergence');
-legend('Protocol A', 'Protocol B', 'Location', 'best');
-grid on;
 
 % Robot initial and final position
 figure;
