@@ -11,6 +11,8 @@ n = 100;
 % K = ?
 % P0 = ?
 % rmin = ?
+% x0 = ?
+% y0 = ?
 
 
 % Generate four networks in Part 1
@@ -26,12 +28,15 @@ d = sum(G, 2);
 D = diag(d);
 L = D - G;
 
-% Protocol A: averaginggit
-
+% Protocol A: averaging
 WA = (I + D)^-1 * (I + G);
-
 
 % Protocol B: one step
 epsilon = 1 / max(d);
 WB = I - epsilon * L;
 
+XA = simulate_linear(WA, x0, K);
+YA = simulate_linear(WA, y0, K);
+
+XB = simulate_linear(WB, x0, K);
+YB = simulate_linear(WB, y0, K);
