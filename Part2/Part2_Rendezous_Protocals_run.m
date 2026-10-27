@@ -1,16 +1,14 @@
 % This is Part two codes
 
-% Find the project root directory
-projectRoot = fileparts(fileparts(mfilename('fullpath')));
+projectRoot = fileparts(fileparts(mfilename('fullpath'))); % Find the project root directory
+addpath(fullfile(projectRoot, 'Part1')); % Add Part1 to MATLAB's search path
 
-% Add Part1 to MATLAB's search path
-addpath(fullfile(projectRoot, 'Part1'));
 n = 100;
-
-% k = ? change before test
-% K = ?
-% P0 = ?
-% rmin = ?
+% input required
+% k = ? (nearest neighbor number in make_ring)
+% K = ? (maximum iteration number)
+% P0 = ? (initial value in make_disk)
+% rmin = ? (in make_disk)
 % x0 = ?
 % y0 = ?
 
@@ -23,7 +21,7 @@ G4 = make_disk(P0, rmin);
 
 
 I = eye(n); % 100x100 identity matrix
-G = ones(n) - I; % Use "ones" to simulate G before Part1 is done.  
+% G = G1/G2/G3/G4 
 d = sum(G, 2);
 D = diag(d);
 L = D - G;
@@ -48,11 +46,9 @@ deltaB = zeros(1, K+1);
 
 for j = 1:K+1
     deltaA(j) = sqrt(norm(C*XA(:,j))^2 + norm(C*YA(:,j))^2);
-
     deltaB(j) = sqrt(norm(C*XB(:,j))^2 + norm(C*YB(:,j))^2);
 end
 
-% Rendezvous threshold: 1% of the initial spread
 thresholdA = 0.01 * deltaA(1);
 thresholdB = 0.01 * deltaB(1);
 
@@ -62,7 +58,7 @@ idxB = find(deltaB <= thresholdB, 1, 'first');
 if isempty(idxA)
     timeA = NaN;
 else
-    timeA = idxA - 1;
+    timeA = idxA - 1; % we have K+1 columns, column -1 = K (times)
 end
 
 if isempty(idxB)
@@ -71,7 +67,8 @@ else
     timeB = idxB - 1;
 end
 
-%% 7. Print rendezvous times
+% report kε for each.
+
 fprintf('Protocol A rendezvous time: ');
 if isnan(timeA)
     fprintf('Not reached within K = %d steps\n', K);
@@ -86,11 +83,14 @@ else
     fprintf('%d steps\n', timeB);
 end
 
-%% 8. Plot convergence spread
+% Plot δ[k] on a log scale, all on one figure
+
 figure;
-semilogy(0:K, max(deltaA, eps), 'LineWidth', 1.5);
+semilogy(0:K, max(deltaA, eps), 'LineWidth', 1.5); %semilogy means log scale
+% eps is the accuracy of matlab, so any value of deltaA below this is inaccurate
 hold on;
 semilogy(0:K, max(deltaB, eps), 'LineWidth', 1.5);
+
 yline(thresholdA, '--', 'A: 1% threshold');
 yline(thresholdB, '--', 'B: 1% threshold');
 xlabel('Iteration k');
@@ -99,9 +99,8 @@ title('Rendezvous Convergence');
 legend('Protocol A', 'Protocol B', 'Location', 'best');
 grid on;
 
-%% 9. Plot robot positions at the initial and final iterations
+% Robot initial and final position
 figure;
-
 subplot(1,3,1);
 plot(x0, y0, 'o');
 axis equal;

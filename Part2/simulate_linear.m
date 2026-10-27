@@ -27,10 +27,10 @@ x0 = x0(:);
 
 % Allocate storage for every time step.
 X = zeros(n, K + 1);
-X(:, 1) = x0;
+X(:, 1) = x0; % transform to column vector
 
 % Simulate using matrix-vector products.
-for k = 1:K
-    X(:, k + 1) = W * X(:, k);
+for iter_k = 1:K
+    X(:, iter_k + 1) = W * X(:, iter_k);
 end
 end
