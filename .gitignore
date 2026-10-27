@@ -2,3 +2,5 @@
 *.m~
 slprj/
 codegen/
+.DS_Store
+**/.DS_Store
