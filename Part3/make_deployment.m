@@ -28,7 +28,7 @@ n = 150;
 
 % Use the requested seed without disturbing the caller's random state.
 oldState = rng;
-rng(122, 'twister');
+rng(seed, 'twister');
 cleanup = onCleanup(@() rng(oldState));
 
 % ---- zones: how many, how big, and how many robots in each ----
