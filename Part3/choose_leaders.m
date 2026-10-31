@@ -30,10 +30,36 @@ function S = choose_leaders(G, P0, faulty, g, m)
 %   <describe it here>
 
 n = size(G, 1);
+
+% calculate the degree initially for simplicity's sake 
+
+degree = sum(G, 2);
+
+% excludes the ones that don't matter/faulty ones and select the ones that
+% do
 working = true(n, 1);
 working(faulty) = false;
 
+% keep the ones that will be useful to us 
+eligible = find(working);
+eligibleDegrees = degree(eligible);
+
+% sort -> follow up with original plan
+[~, order] = sort(eligibleDegrees, "descend");
+% ordering them from top to bottom will allow us to see the robots with the
+% most communications available to them
+rankedList = eligible(order);
+
+
+% mostly done, finally select ms 
+
+mLeaders = min(m, length(rankedList));
 % ---- replace this placeholder with your strategy ----
-S = [];   % no leaders: valid, but scores 0
+S = rankedList(1:mLeaders);   % no leaders: valid, but scores 0
+
+% this strategy will select leaders through the amount of connections/high
+% degree they have
+
+
 
 end
