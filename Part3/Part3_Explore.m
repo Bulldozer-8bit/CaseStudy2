@@ -1,20 +1,16 @@
-% Compare three simple leader-selection strategies:
-%
-% 1. Random selection
-% 2. Highest-degree selection
-% 3. Closest-to-rally selection
-%
-% Number of practice deployments: 20
-% Maximum number of leaders: 4
+%% Part3_Explore.m
+% Compare three simple leader-selection strategies
+% over multiple practice deployments.
 
 clear;
 clc;
 close all;
 
-%% 1. Parameters
+%% 1. Experiment settings
 
-numDeployments = 20;
-m = 4;
+numDeployments = 30;       % At least 20, as required
+seeds = 1:numDeployments;
+m = 4;                     % Maximum number of leaders
 
 strategyNames = {
     'Random'
@@ -22,326 +18,216 @@ strategyNames = {
     'Closest to Rally'
 };
 
-numStrategies = numel(strategyNames);
+numStrategies = length(strategyNames);
 
-%% 2. Storage
-
+% Each row: one deployment
+% Each column: one strategy
 scores = zeros(numDeployments, numStrategies);
 
+% Store deployments for later plotting
 deployments = cell(numDeployments, 1);
 
+% Store selected leaders
 selectedLeaders = cell(numDeployments, numStrategies);
 
-%% 3. Generate deployments and evaluate strategies
 
-for s = 1:numDeployments
+%% 2. Generate deployments and evaluate strategies
 
-    fprintf('Evaluating deployment %d of %d...\n', ...
-        s, numDeployments);
+for q = 1:numDeployments
 
-    %% Generate deployment
+    seed = seeds(q);
 
-    D = make_deployment(s);
+    % Generate a deployment
+    D = make_deployment(seed);
+    deployments{q} = D;
 
-    deployments{s} = D;
-
-    n = size(D.P0, 1);
+    n = size(D.G, 1);
 
     % Exclude faulty robots
-    faulty = D.faulty(:);
+    working = setdiff(1:n, D.faulty(:)');
 
-    workingRobots = setdiff(1:n, faulty');
+    mUse = min(m, length(working));
 
-    % Number of leaders to select
-    numLeaders = min(m, numel(workingRobots));
 
-    %% Strategy 1: Random selection
+    %% Strategy 1: Random working robots
 
-    % Use a fixed random seed for reproducibility
-    rng(10000 + s, 'twister');
+    % Use a reproducible random selection for each deployment
+    rng(100000 + seed, 'twister');
 
-    randomOrder = randperm(numel(workingRobots));
+    randomOrder = randperm(length(working));
+    S_random = working(randomOrder(1:mUse));
 
-    S_random = workingRobots( ...
-        randomOrder(1:numLeaders));
 
-    selectedLeaders{s, 1} = S_random;
+    %% Strategy 2: Highest-degree robots
 
-    scores(s, 1) = score_mission(D, S_random);
-
-    %% Strategy 2: Highest-degree selection
-
-    % Calculate the degree of every robot
     degree = sum(D.G, 2);
 
-    % Only consider working robots
-    workingDegree = degree(workingRobots);
+    [~, order] = sort(degree(working), 'descend');
 
-    % Sort working robots by degree in descending order
-    [~, degreeOrder] = sort(workingDegree, 'descend');
+    S_degree = working(order(1:mUse));
 
-    S_degree = workingRobots( ...
-        degreeOrder(1:numLeaders));
 
-    selectedLeaders{s, 2} = S_degree;
+    %% Strategy 3: Robots closest to the rally point
 
-    scores(s, 2) = score_mission(D, S_degree);
+    distances = sqrt(sum((D.P0(working, :) - D.g).^2, 2));
 
-    %% Strategy 3: Closest-to-rally selection
+    [~, order] = sort(distances, 'ascend');
 
-    % Calculate Euclidean distance to the rally point
-    distances = sqrt( ...
-        (D.P0(workingRobots, 1) - D.g(1)).^2 + ...
-        (D.P0(workingRobots, 2) - D.g(2)).^2);
+    S_closest = working(order(1:mUse));
 
-    % Sort by distance in ascending order
-    [~, distanceOrder] = sort(distances, 'ascend');
 
-    S_closest = workingRobots( ...
-        distanceOrder(1:numLeaders));
+    %% Evaluate the three strategies
 
-    selectedLeaders{s, 3} = S_closest;
+    selectedLeaders{q, 1} = S_random;
+    selectedLeaders{q, 2} = S_degree;
+    selectedLeaders{q, 3} = S_closest;
 
-    scores(s, 3) = score_mission(D, S_closest);
+    scores(q, 1) = score_mission(D, S_random);
+    scores(q, 2) = score_mission(D, S_degree);
+    scores(q, 3) = score_mission(D, S_closest);
+
+    fprintf('Seed %d completed.\n', seed);
 
 end
 
-fprintf('\nAll deployments evaluated successfully.\n');
 
-%% 4. Check the results
+%% 3. Display average, median, and standard deviation
 
-assert(all(isfinite(scores(:))), ...
-    'Some mission scores are not finite.');
+meanScores = mean(scores, 1)';
+medianScores = median(scores, 1)';
+stdScores = std(scores, 0, 1)';
 
-%% 5. Plot score distributions
+summaryTable = table( ...
+    strategyNames, ...
+    meanScores, ...
+    medianScores, ...
+    stdScores, ...
+    'VariableNames', ...
+    {'Strategy', 'MeanScore', 'MedianScore', 'StdScore'});
 
-figure('Name', 'Leader Strategy Comparison', ...
-       'NumberTitle', 'off');
+disp(' ');
+disp('========== Strategy Comparison ==========');
+disp(summaryTable);
+
+
+%% 4. Determine the best strategy by average score
+
+[~, bestIndex] = max(meanScores);
+
+fprintf('\nBest strategy by average score: %s\n', ...
+    strategyNames{bestIndex});
+
+
+%% 5. Plot deployment layouts using predetermined seeds
+
+% These seeds are selected before examining the scores.
+% They are NOT selected based on best or worst performance.
+
+layoutSeeds = [1, 7, 19, 30];
+
+figure('Name', 'Practice Deployment Layouts', ...
+       'Position', [100, 100, 1000, 700]);
+
+for p = 1:length(layoutSeeds)
+
+    seed = layoutSeeds(p);
+    q = find(seeds == seed, 1);
+
+    D = deployments{q};
+
+    working = setdiff(1:size(D.P0, 1), D.faulty(:)');
+
+    subplot(2, 2, p);
+
+    % Working robots
+    scatter(D.P0(working, 1), D.P0(working, 2), ...
+        18, 'b', 'filled');
+
+    hold on;
+
+    % Faulty robots
+    scatter(D.P0(D.faulty, 1), D.P0(D.faulty, 2), ...
+        35, 'r', 'filled');
+
+    % Rally point
+    plot(D.g(1), D.g(2), 'kp', ...
+        'MarkerSize', 13, ...
+        'MarkerFaceColor', 'y');
+
+    axis equal;
+    grid on;
+
+    xlabel('x');
+    ylabel('y');
+
+    title(sprintf('Deployment: Seed %d, r = %.1f', ...
+        seed, D.r));
+
+    legend('Working robots', 'Faulty robots', 'Rally point', ...
+        'Location', 'best');
+
+end
+
+sgtitle('Examples of Practice Deployments');
+
+
+%% 6. Plot score distributions
+
+figure('Name', 'Score Distribution Comparison', ...
+       'Position', [150, 150, 850, 550]);
 
 boxplot(scores, 'Labels', strategyNames);
 
 ylabel('Mission Score (%)');
+xlabel('Leader Selection Strategy');
 
-title('Comparison of Three Leader-Selection Strategies');
-
-grid on;
-
-yline(0, '--k', 'No improvement');
-
-%% 6. Calculate statistical results
-
-meanScores = mean(scores, 1);
-
-worstScores = min(scores, [], 1);
-
-bestScores = max(scores, [], 1);
-
-stdScores = std(scores, 0, 1);
-
-%% 7. Display summary table
-
-Summary = table( ...
-    strategyNames, ...
-    meanScores', ...
-    worstScores', ...
-    bestScores', ...
-    stdScores', ...
-    'VariableNames', { ...
-        'Strategy', ...
-        'AverageScore', ...
-        'WorstScore', ...
-        'BestScore', ...
-        'StandardDeviation' ...
-    });
-
-fprintf('\n===== Strategy Comparison Summary =====\n');
-
-disp(Summary);
-
-%% 8. Find the worst-performing strategy and deployment
-
-[worstScore, linearIndex] = min(scores(:));
-
-[worstDeployment, worstStrategy] = ...
-    ind2sub(size(scores), linearIndex);
-
-fprintf('\n===== Worst-Case Result =====\n');
-
-fprintf('Deployment: %d\n', worstDeployment);
-
-fprintf('Strategy: %s\n', ...
-    strategyNames{worstStrategy});
-
-fprintf('Mission score: %.4f%%\n', worstScore);
-
-%% 9. Restore the matching deployment and leader set
-
-% IMPORTANT:
-% Always retrieve D and S using the same deployment and strategy
-% before plotting. This prevents mismatched deployment/leader data.
-
-D = deployments{worstDeployment};
-
-S = selectedLeaders{worstDeployment, worstStrategy};
-
-%% 10. Plot the worst-case deployment
-
-figure('Name', 'Worst-Case Deployment', ...
-       'NumberTitle', 'off');
-
-hold on;
-
-% Draw communication links
-gplot(D.G, D.P0);
-% Plot all robots
-scatter( ...
-    D.P0(:, 1), ...
-    D.P0(:, 2), ...
-    25, ...
-    'b', ...
-    'filled');
-
-% Plot faulty robots
-scatter( ...
-    D.P0(D.faulty, 1), ...
-    D.P0(D.faulty, 2), ...
-    65, ...
-    'r', ...
-    's', ...
-    'filled');
-
-% Plot selected leaders
-scatter( ...
-    D.P0(S, 1), ...
-    D.P0(S, 2), ...
-    100, ...
-    'g', ...
-    'd', ...
-    'filled');
-
-% Plot rally point
-scatter( ...
-    D.g(1), ...
-    D.g(2), ...
-    180, ...
-    'm', ...
-    'p', ...
-    'filled');
-
-xlabel('x position');
-
-ylabel('y position');
-
-title(sprintf( ...
-    'Worst Case: Deployment %d, %s, Score = %.2f%%', ...
-    worstDeployment, ...
-    strategyNames{worstStrategy}, ...
-    worstScore));
-
-legend( ...
-    'Communication links', ...
-    'Working robots', ...
-    'Faulty robots', ...
-    'Selected leaders', ...
-    'Rally point', ...
-    'Location', ...
-    'best');
-
-axis equal;
+title(sprintf('Score Distributions over %d Practice Deployments', ...
+    numDeployments));
 
 grid on;
 
-hold off;
 
-%% 11. Plot the average score of each strategy
+%% 7. Analyze the lower-performing quarter of deployments
 
-figure('Name', 'Average Strategy Scores', ...
-       'NumberTitle', 'off');
+% This examines recurring failure patterns rather than selecting
+% and plotting one single worst deployment.
 
-bar(meanScores);
+numLow = max(1, ceil(0.25 * numDeployments));
 
-set(gca, ...
-    'XTick', 1:numStrategies, ...
-    'XTickLabel', strategyNames);
+fprintf('\n========== Lower-Performing Deployment Analysis ==========\n');
 
-ylabel('Average Mission Score (%)');
+for s = 1:numStrategies
 
-title('Average Performance Across 20 Deployments');
+    [sortedScores, order] = sort(scores(:, s), 'ascend');
 
-grid on;
+    lowIndices = order(1:numLow);
 
-%% 12. Plot the worst score of each strategy
+    fprintf('\n%s:\n', strategyNames{s});
+    fprintf('Lower-quarter score range: %.2f to %.2f\n', ...
+        sortedScores(1), sortedScores(numLow));
 
-figure('Name', 'Worst Strategy Scores', ...
-       'NumberTitle', 'off');
+    for j = 1:length(lowIndices)
 
-bar(worstScores);
+        q = lowIndices(j);
+        D = deployments{q};
 
-set(gca, ...
-    'XTick', 1:numStrategies, ...
-    'XTickLabel', strategyNames);
+        degree = sum(D.G, 2);
 
-ylabel('Worst Mission Score (%)');
+        % Geometric size of the deployment
+        spatialSize = norm(max(D.P0, [], 1) - min(D.P0, [], 1));
 
-title('Worst-Case Performance Across 20 Deployments');
+        % Average distance from working robots to the rally point
+        working = setdiff(1:size(D.P0, 1), D.faulty(:)');
 
-grid on;
+        avgDistanceToRally = mean( ...
+            sqrt(sum((D.P0(working, :) - D.g).^2, 2)));
 
-%% 13. Save results
+        fprintf(['  Seed %d: score = %.2f, ' ...
+                 'mean degree = %.2f, degree std = %.2f, ' ...
+                 'spatial size = %.2f, avg rally distance = %.2f\n'], ...
+            D.seed, scores(q, s), mean(degree), std(degree), ...
+            spatialSize, avgDistanceToRally);
 
-save('leader_strategy_results.mat', ...
-    'scores', ...
-    'Summary', ...
-    'deployments', ...
-    'selectedLeaders', ...
-    'worstDeployment', ...
-    'worstStrategy');
+    end
 
-fprintf('\nResults saved to leader_strategy_results.mat\n');
-
-%% Generate deployment
-
-D = make_deployment(7);
-
-n = size(D.P0, 1);
-workingRobots = setdiff(1:n, D.faulty(:)');
-
-m = 4;
-
-%% Strategy 1: Random
-
-rng(10007, 'twister');
-
-order = randperm(length(workingRobots));
-S_random = workingRobots(order(1:m));
-
-%% Strategy 2: Highest Degree
-
-degree = sum(D.G, 2);
-
-[~, order] = sort(degree(workingRobots), 'descend');
-S_degree = workingRobots(order(1:m));
-
-%% Strategy 3: Closest to Rally
-
-distances = sqrt( ...
-    (D.P0(workingRobots, 1) - D.g(1)).^2 + ...
-    (D.P0(workingRobots, 2) - D.g(2)).^2);
-
-[~, order] = sort(distances, 'ascend');
-S_closest = workingRobots(order(1:m));
-
-%% Prepare strategies for the viewer
-
-L(1).name = 'Random';
-L(1).S = S_random;
-
-L(2).name = 'Highest Degree';
-L(2).S = S_degree;
-
-L(3).name = 'Closest to Rally';
-L(3).S = S_closest;
-
-%% Export JSON
-
-export_for_viewer(D, L, 'comparison.json');
+end
